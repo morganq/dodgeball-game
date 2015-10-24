@@ -12,7 +12,7 @@ class Game:
 		pygame.mixer.pre_init(44100, 16, -2, 1024)
 		pygame.init()
 		pygame.font.init()
-		flags |= pygame.SRCALPHA
+		#flags |= pygame.SRCALPHA
 		self._screen = pygame.display.set_mode( (self.width * self.zoom, self.height * self.zoom), flags )
 		self.screen = pygame.surface.Surface((self.width, self.height), flags)
 		self.scene = None
