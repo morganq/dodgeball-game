@@ -264,4 +264,6 @@ class NetServer(NetCommon):
 
 	def process_ping(self, data, game, info):
 		c = self.getClient(info)
+		if c is None:
+			return
 		self.sendToClient(c, {"type":"pong"})
