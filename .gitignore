@@ -5,3 +5,4 @@ dodgeball/
 *.pyc
 *.rar
 *.psd
+config.json
