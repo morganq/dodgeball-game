@@ -1,0 +1,2 @@
+SERVER = False
+game = None
