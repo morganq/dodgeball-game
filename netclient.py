@@ -18,6 +18,8 @@ class NetClient(NetCommon):
 		
 		self.myPlayer = None
 
+		self.stun_t = 0
+
 	def lookupEntity(self, scene, netid):
 		for e in scene.sceneEntities:
 			if "netid" in e.netinfo and e.netinfo["netid"] == netid:
@@ -88,8 +90,6 @@ class NetClient(NetCommon):
 
 		entity.visible = edata["visible"]
 
-
-
 		
 	def updatePlayer(self, player, pdata, game):
 		#if player == self.myPlayer:
@@ -99,8 +99,8 @@ class NetClient(NetCommon):
 			print("Player is None!")
 			return
 		if player is self.myPlayer:
-			if player.stunTimer <= 0 and pdata["stun"] >= 0:
-				player.stunTimer = pdata["stun"]
+			if self.t >= self.stun_t + self.latency:
+				player.stunTimer = min(player.stunTimer, pdata["stun"] - self.latency / 2)
 		else:
 			player.stunTimer = pdata["stun"]
 		player.health = pdata["health"]
@@ -111,6 +111,8 @@ class NetClient(NetCommon):
 		self.sendToServer({"type":"directionInput", "x" : x, "y" : y})
 		
 	def sendButtonInput(self, button):
+		if button in ["throw", "super"]:
+			self.stun_t = self.t
 		self.sendToServer({"type":"buttonInput", "button":button})
 		
 	def sendPlayerInfo(self, name, exString, superString):

@@ -100,7 +100,7 @@ class NetServer(NetCommon):
 		data["xDirection"] = p.xDirection
 		data["yDirection"] = p.yDirection
 		data["health"] = int(p.health)
-		data["stun"] = int(p.stunTimer * 100) / 100.0
+		data["stun"] = p.stunTimer
 		data["superTicks"] = p.superTicks
 		data["knockback"] = p.knockbackVelocity
 		return data
