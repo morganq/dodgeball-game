@@ -33,6 +33,7 @@ def loadImages(top, path):
 					print("Failed to load " + path + "/" + f)
 
 def loadSounds(top, path):
+	pygame.mixer.init()
 	for f in os.listdir(path):
 		if f[0] != ".":
 			sounds[f] = pygame.mixer.Sound(path+"/"+f)

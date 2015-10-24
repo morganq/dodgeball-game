@@ -487,11 +487,11 @@ class PlayerController:
 			if evt.key == pygame.K_z:
 				if self.player.clientCanAttemptThrow():
 					self.netClient.sendButtonInput("super")
-					self.player.stunTimer = 0.1
+					self.player.stunTimer = 5.0
 			if evt.key == pygame.K_x:
 				if self.player.clientCanAttemptThrow():
 					self.netClient.sendButtonInput("throw")
-					self.player.stunTimer = 0.1
+					self.player.stunTimer = 5.0
 			if evt.key == pygame.K_c:
 				self.netClient.sendButtonInput("jump")
 				self.player.tryJump()
