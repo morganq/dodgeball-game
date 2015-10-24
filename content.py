@@ -32,11 +32,27 @@ def loadImages(top, path):
 				except:
 					print("Failed to load " + path + "/" + f)
 
+class FakeSound:
+	def __init__(self,*args, **kwargs):
+		pass
+
+	def play(*args, **kwargs):
+		pass
+
 def loadSounds(top, path):
+	soundBroken = False
+	try:
+		pygame.mixer.init()
+	except:
+		print "No sound"
+		soundBroken = True
 	for f in os.listdir(path):
 		if f[0] != ".":
-			sounds[f] = pygame.mixer.Sound(path+"/"+f)
-			sounds[f].set_volume(0.25)
+			if soundBroken:
+				sounds[f] = FakeSound()
+			else:
+				sounds[f] = pygame.mixer.Sound(path+"/"+f)
+				sounds[f].set_volume(0.25)
 
 def load():
 	loadImages(images, "images")
