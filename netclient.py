@@ -67,11 +67,14 @@ class NetClient(NetCommon):
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
 		self.sendPort = port
-		self.sendToServer( {"type":"hello"} )
+		self.sendEnsuredToServer( {"type":"hello"} )
 		print("Connecting...")
 
 	def sendToServer(self, data):
 		self.sendPacket(data, self.sendAddr, self.sendPort)
+
+	def sendEnsuredToServer(self, data):
+		self.sendEnsuredPacket(data, self.sendAddr, self.sendPort)		
 
 	def sendPing(self):
 		self.pingTimestamp = self.t
@@ -128,7 +131,7 @@ class NetClient(NetCommon):
 		self.sendToServer({"type":"buttonInput", "button":button,"x":pos.x, "y":pos.y})
 		
 	def sendPlayerInfo(self, name, exString, superString):
-		self.sendToServer({"type":"playerInfo", "name":name, "super":superString, "ex":exString})
+		self.sendEnsuredToServer({"type":"playerInfo", "name":name, "super":superString, "ex":exString})
 
 	def sendTimeSyncRequest(self):
 		self.sendToServer({"type":"timeSyncRequest", "client":self.t})
@@ -173,7 +176,7 @@ class NetClient(NetCommon):
 		print("Connected.")
 
 	def process_state(self, data, game, info):
-		print self.serverTime - data["time"]
+		#print self.serverTime - data["time"]
 		self.simulatedRandomLatency = self.simulatedRandomLatencyVal
 		self.timeSinceUpdate = 0
 		for edata in data["entities"]:
