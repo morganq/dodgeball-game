@@ -15,7 +15,7 @@ class NetCommon:
 	def __init__(self, listenPort):
 		#Make a UDP socket
 		self.sock = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-		self.sock.bind( ("", listenPort) )
+		self.sock.bind( ("0.0.0.0", listenPort) )
 		self.sock.settimeout(0)
 		self.packetSize = 0
 		self.t = 0
