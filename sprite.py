@@ -110,6 +110,7 @@ class Sprite(Entity):
 		st["z"] = self.z
 		st["zVelocity"] = self.zVelocity
 		st["position"] = self.position
+		st["velocity"] = self.velocity
 		return st
 
 	def prepareMidState(self, prev, next, mh):
@@ -119,5 +120,6 @@ class Sprite(Entity):
 		newState["position"] = next["position"] * mh + prev["position"] * ml
 		newState["z"] = next["z"] * mh + prev["z"] * ml
 		newState["zVelocity"] = next["zVelocity"] * mh + prev["zVelocity"] * ml
+		newState["velocity"] = next["velocity"] * mh + prev["velocity"] * ml
 
 		return newState

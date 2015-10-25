@@ -48,6 +48,12 @@ class Game:
 		if self.debugMode:
 			surf = self.debugFont.render("%.2f - %.2f" % (self.net.packetSize, self.net.packetsPerSecond), False, (255, 0, 0))
 			self.screen.blit(surf, (240, 1))
+			i = 0
+			for k,v in self.net.packetloss.items():
+				pl = self.net.averagedData.get_avg(self.net.t, "packetloss_" + k, 10) * 100.0
+				surf = self.debugFont.render("%s: %.2f%%" %(k,pl), False, (255, 0, 0))
+				self.screen.blit(surf, (7, 12 * i + 1))
+				i += 1
 
 			for (a,b) in self.net.debug_lines:
 				pygame.draw.line(self.screen, (255,0,0,255),a.asIntTuple(), b.asIntTuple(), 1)
