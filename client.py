@@ -67,13 +67,17 @@ class Client(Game):
 		if self.controller and not self.typingMode and not self.pauseInput:
 			self.controller.update(dt)
 
+
 	def postDraw(self):
+		Game.postDraw(self)
 		if self.typingMode:
 			surf = self.typingModeFont.render(">"+self.typingModeText, False, (39, 65, 62))
 			self.screen.blit(surf, (1,1))
 
-		surf = self.typingModeFont.render(str(self.net.packetSize) + " - " + str(self.net.packetsPerSecond), False, (255, 0, 0))
-		self.screen.blit(surf, (240, 1))
+		if self.debugMode:
+			for (a,b) in self.net.debug_lines:
+				pygame.draw.line(self.screen, (255,0,0,255),a.asIntTuple(), b.asIntTuple(), 1)
+				pygame.draw.circle(self.screen, (255,255,0,255),b.asIntTuple(), 3)
 
 def run(*args):
 	game = Client(*args)

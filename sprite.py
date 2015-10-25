@@ -76,6 +76,7 @@ class Sprite(Entity):
 		self.addAnimation("default", image, rect[0], rect[1], rect[2], rect[3], 1, 0, False)
 
 	def update(self, dt):
+		Entity.update(self, dt)
 		self.z += self.zVelocity * dt
 		self.velocity += self.acceleration * dt
 		self.position += self.velocity * dt
@@ -103,3 +104,20 @@ class Sprite(Entity):
 				image = pygame.transform.rotate(image, int(self.angle/90) * 90)
 			screen.blit(image, (self.position - self.offset + Vector2(0, -self.z)).asTuple())
 			#pygame.draw.circle(screen, (255,0,0), self.position.asIntTuple(), 1)
+
+	def recordState(self):
+		st = Entity.recordState(self)
+		st["z"] = self.z
+		st["zVelocity"] = self.zVelocity
+		st["position"] = self.position
+		return st
+
+	def prepareMidState(self, prev, next, mh):
+		ml = 1 - mh
+		newState = Entity.prepareMidState(self, prev, next, mh)
+		
+		newState["position"] = next["position"] * mh + prev["position"] * ml
+		newState["z"] = next["z"] * mh + prev["z"] * ml
+		newState["zVelocity"] = next["zVelocity"] * mh + prev["zVelocity"] * ml
+
+		return newState

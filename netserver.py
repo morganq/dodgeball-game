@@ -57,7 +57,7 @@ class NetServer(NetCommon):
 		if(game.started):
 			self.stateUpdateTimer -= dt
 			if self.stateUpdateTimer < 0:
-				self.stateUpdateTimer = 0.25 + self.stateUpdateTimer
+				self.stateUpdateTimer = 0.05 + self.stateUpdateTimer
 				self.sendStateUpdate(game)
 
 			if self.ended:
@@ -109,7 +109,7 @@ class NetServer(NetCommon):
 		data = {}
 		data["netid"] = e.netinfo["netid"]
 		data["position"] = e.position.asIntTuple()
-		data["velocity"] = e.velocity.asIntTuple()
+		data["velocity"] = e.velocity.asTuple()
 		data["z"] = int(e.z)
 		data["zVelocity"] = int(e.zVelocity)
 		data["visible"] = e.visible

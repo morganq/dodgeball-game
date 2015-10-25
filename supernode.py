@@ -50,6 +50,7 @@ class AccelNode(SuperNode):
 	tile = "s_accel.png"
 	cost = 5
 	def begin(self, ball):
+		print "accel"
 		mag = ball.velocity.length()
 		ball.velocity.normalize()
 		ball.velocity *= max(mag+ 50, 150)
