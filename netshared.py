@@ -9,6 +9,7 @@ from supernode import *
 import zlib
 import g
 import pygame
+from collections import defaultdict
 
 class NetCommon:
 	netEntities = { "player": Player, "ball": Ball }
@@ -28,21 +29,31 @@ class NetCommon:
 		self.simulatedLatency = 0
 		self.simulatedPackets = []
 
-	def readPacket(self, data):
-		p = []
-#		for pack in data.split("\n\n"):
-#			self.packetsThisSecond += 1
-#			if len(pack) > 0:
-#				try:
-#					p.append(pickle.loads(zlib.decompress(pack)))
-#				except:
-#					print("Failed to read packet, saving for next frame.")
-#					self.buf += pack
-		p.append(pickle.loads(zlib.decompress(data)))
+		self.packet_outbound_last_id = defaultdict(lambda:0)
+		self.packet_inbound_last_id = defaultdict(lambda:0)
+		self.packetloss = defaultdict(lambda:0)
+
+		self.netinfotimer = 1.0
+
+	def readPacket(self, info, data):
+		unpacked = pickle.loads(zlib.decompress(data))
+
+		addr, port = info
+		addrportstr = addr + ":" + str(port)
+		pid = unpacked["packet_id"]
+		lid = self.packet_inbound_last_id[addrportstr]
+		if pid > lid + 1:
+			self.packetloss[addrportstr] += 1
+		self.packet_inbound_last_id[addrportstr] = pid
+
 		self.packetTimestamps.append(self.t)
-		return p
+
+		return [unpacked]
 
 	def sendPacket(self, data, addr, port):
+		addrportstr = addr + ":" + str(port)
+		data["packet_id"] = self.packet_outbound_last_id[addrportstr]
+		self.packet_outbound_last_id[addrportstr] += 1
 		self.sock.sendto(zlib.compress(pickle.dumps(data, 2)), (addr, port))
 
 	def update(self, game, dt):
@@ -59,7 +70,7 @@ class NetCommon:
 		try:
 			(data, info) = self.sock.recvfrom(4096)
 			#self.packetSize = len(data)
-			allPackets = self.readPacket(data)
+			allPackets = self.readPacket(info, data)
 		except(socket.error):
 			pass
 
@@ -74,6 +85,14 @@ class NetCommon:
 			for (p, t, info) in thisFramePackets:
 				self.process(p, game, info)
 			self.simulatedPackets = [ (s[0], s[1] - dt, s[2]) for s in self.simulatedPackets ]
+
+		self.netinfotimer -= dt
+		if self.netinfotimer <= 0:
+			self.netinfotimer += 1
+			for k,v in self.packet_inbound_last_id.items():
+				x = self.packetloss[k]
+				if v > 0:
+					print "packet loss for " + k + "\t" + str( (float(x) * 100 / float(v))) + "%"
 
 	def process(self, data, game, info):
 		if(hasattr(self, "process_" + data["type"])):

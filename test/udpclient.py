@@ -8,4 +8,4 @@ sock = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 
 for i in range(1100):
 	sock.sendto(str(i), (addr, port))
-	#time.sleep(0.01)
+	time.sleep(0.001)
