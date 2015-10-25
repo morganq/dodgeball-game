@@ -86,9 +86,6 @@ class NetClient(NetCommon):
 		else:
 			timeAgo = self.serverTime - time
 			oldState = entity.getOldState(timeAgo)
-
-			if entity.name == "ball":
-				print edata["velocity"]
 			
 			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
 			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
@@ -96,7 +93,7 @@ class NetClient(NetCommon):
 			entity.netinfo["predictedZ"] = predictedZ
 			if (predictedXY - entity.position).lengthSquared() > 8*8:
 				entity.position = predictedXY
-			if abs(predictedZ - entity.z) > 8:
+			if abs(predictedZ - entity.z) > 3:
 				entity.z = predictedZ
 			#entity.position = Vector2(*edata["position"])
 			#entity.z = edata["z"]
@@ -176,6 +173,7 @@ class NetClient(NetCommon):
 		print("Connected.")
 
 	def process_state(self, data, game, info):
+		print self.serverTime - data["time"]
 		self.simulatedRandomLatency = self.simulatedRandomLatencyVal
 		self.timeSinceUpdate = 0
 		for edata in data["entities"]:

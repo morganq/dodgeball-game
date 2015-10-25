@@ -85,8 +85,10 @@ class NetCommon:
 				pass
 			else:
 				allPackets = self.readPacket(info, data)
-		except(socket.error):
+		except socket.timeout:
 			pass
+		except socket.error as err:
+			print err
 
 		#print self.simulatedPackets
 		if self.simulatedLatency == 0:
