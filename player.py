@@ -70,8 +70,10 @@ class Player(Sprite):
 		
 		self.catchingTimer = 0.0
 		self.stunTimer = 0.0
+		self.clientStunTimer = 0.0
 		self.throwTimer = 0.0
 		self.hitTimer = 0.0
+		self.dashVelocity = Vector2(0,0)
 		
 		self.correctPosition = Vector2(0,0)
 
@@ -86,7 +88,7 @@ class Player(Sprite):
 			return
 
 		if self.dashDirection == direction and self.dashTimer > 0:
-			self.knockbackVelocity = Vector2(direction[0] * 500, direction[1] * 500)
+			self.dashVelocity = Vector2(direction[0] * 500, direction[1] * 500)
 			self.stunTimer = 0.5
 			g.game.playSound("dodge.wav")
 			self.netinfo["teleporting"] = True
@@ -148,6 +150,9 @@ class Player(Sprite):
 		else:
 			self.runningHome = False
 
+		if self.clientStunTimer > 0:
+			self.clientStunTimer -= dt
+
 		if self.stunTimer > 0:
 			self.stunTimer -= dt
 			xd = 0
@@ -207,16 +212,24 @@ class Player(Sprite):
 
 		self.pTimer -= dt
 
-		if self.knockbackVelocity.x != 0 or self.knockbackVelocity.y != 0:
+		self.pushVelocity = None
+		if not self.knockbackVelocity.isZero():
+			self.pushVelocity = self.knockbackVelocity
+		elif not self.dashVelocity.isZero():
+			self.pushVelocity = self.dashVelocity
+
+		if self.pushVelocity:
 			if self.pTimer <= 0:
 				p = g.game.scene.particles.spawn(content.images['dashtrail.png'], Vector2(self.position.x, self.position.y-14-self.z), Vector2(0,0), 0.25)
 				p.flipped = self.flipHorizontal
 				self.pTimer = 0.05
 			self.stunTimer = 0.1
-			self.velocity = self.knockbackVelocity
+			self.velocity = self.pushVelocity
 			self.knockbackVelocity *= 0.8
-			if self.knockbackVelocity.lengthSquared() < 10:
-				self.knockbackVelocity = Vector2(0, 0)
+			self.dashVelocity *= 0.8
+			if self.pushVelocity.lengthSquared() < 10:
+				self.knockbackVelocity.zero()
+				self.dashVelocity.zero()
 
 		if self.throwTimer > 0:
 			self.throwTimer -= dt
@@ -241,6 +254,8 @@ class Player(Sprite):
 		else:
 			if self.zVelocity < -20:
 				self.stunTimer = 0.5
+				if not g.SERVER:
+					self.clientStunTimer = 0.5
 			self.z = 0
 			self.zVelocity = 0
 
@@ -251,13 +266,6 @@ class Player(Sprite):
 			if self.currentAnimation != self.lastAnimation:
 				g.game.net.broadcast({"type":"animation", "netid":self.netinfo["netid"], "name":self.currentAnimation.name})
 		self.lastAnimation = self.currentAnimation
-
-		
-
-		if not g.SERVER and self.correctPosition is not None:
-			#print self.correctPosition
-			self.position -= self.correctPosition * dt * 5
-			self.correctPosition -= self.correctPosition * dt * 5
 
 	def serverplay(self, name):
 		if g.SERVER:
@@ -441,7 +449,8 @@ class PlayerController:
 		if keys[pygame.K_DOWN]:
 			ky = 1
 		if kx != self.lastkx or ky != self.lastky:
-			self.netClient.sendDirectionInput(kx, ky)
+			self.netClient.sendDirectionInput(kx, ky, self.player.position)
+			self.player.tryDash((kx, ky))
 
 		if self.player.stunTimer <= 0:
 			self.player.xDirection = kx
@@ -454,13 +463,13 @@ class PlayerController:
 		if evt.type == pygame.KEYDOWN:
 			if evt.key == pygame.K_z:
 				if self.player.clientCanAttemptThrow():
-					self.netClient.sendButtonInput("super")
+					self.netClient.sendButtonInput("super", self.player.position)
 					self.player.stunTimer = 5.0
 			if evt.key == pygame.K_x:
 				if self.player.clientCanAttemptThrow():
-					self.netClient.sendButtonInput("throw")
+					self.netClient.sendButtonInput("throw", self.player.position)
 					self.player.stunTimer = 5.0
 			if evt.key == pygame.K_c:
-				self.netClient.sendButtonInput("jump")
+				self.netClient.sendButtonInput("jump", self.player.position)
 				self.player.tryJump()
 

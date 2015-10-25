@@ -27,7 +27,7 @@ class NetCommon:
 		self.packetTimestamps = []
 		self.packetsPerSecond = 0
 		
-		self.simulatedLatency = 0
+		self.simulatedLatency = 0.1
 		self.simulatedPackets = []
 
 		self.packet_outbound_last_id = defaultdict(lambda:0)
@@ -37,6 +37,8 @@ class NetCommon:
 		self.averagedData = AveragedData()
 
 		self.netinfotimer = 1.0
+
+		self.debug_lines = []
 
 	def readPacket(self, info, data):
 		unpacked = pickle.loads(zlib.decompress(data))

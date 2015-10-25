@@ -15,12 +15,12 @@ class NetClient(NetCommon):
 		self.latency = 0
 		self.pingTimestamp = 0
 		self.pingTimer = 0
+
+		self.playerPosUpdateTimer = 0
 		
 		self.myPlayer = None
 
 		self.stun_t = 0
-
-		self.debug_lines = []
 
 	def lookupEntity(self, scene, netid):
 		for e in scene.sceneEntities:
@@ -36,22 +36,15 @@ class NetClient(NetCommon):
 			self.pingTimer = 2.0 - self.pingTimer
 			self.sendPing()
 
+		if self.myPlayer:
+			self.playerPosUpdateTimer -= dt
+			if self.playerPosUpdateTimer <= 0:
+				self.playerPosUpdateTimer += 0.25
+				self.sendPlayerPosition(self.myPlayer.position)
+
 		for e in game.scene.sceneEntities:
-			if "position1" in e.netinfo:
-				p1 = e.netinfo["position1"]
-				p2 = e.netinfo["position2"]
-				t1 = e.netinfo["time1"]
-				t2 = e.netinfo["time2"]
-				deltat = max(t2 - t1, 0.01)
-				deltap = p2 - p1
-				tval = ((self.t - deltat) - t1) / deltat
-				correctPos = deltap * tval + p1
-				oldState = e.getOldState(self.latency)
-				if (oldState["position"] - correctPos).lengthSquared() > 8*8 and (e.position - correctPos).lengthSquared() > 8*8:
-					#print "stuff"
-					self.debug_lines.append((e.position, correctPos))
-					self.debug_lines = self.debug_lines[-10:]
-					e.position = e.position * 0.9 + correctPos * 0.1
+			# correct positioning
+			pass
 
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
@@ -71,26 +64,9 @@ class NetClient(NetCommon):
 			print("Entity is None!")
 			return
 		if entity == self.myPlayer:
-			pos = Vector2(*edata["position"])
-			os = entity.getOldState(self.latency)
-			if os and (pos - os["position"]).lengthSquared() > 8*8:
-				entity.correctPosition = entity.position - pos
-			if os and abs(edata["z"] - os["z"]) > 10:
-				entity.z = edata["z"]
-			if os and (edata["zVelocity"] > 0 and os["zVelocity"] <= 0 or edata["zVelocity"] <= 0 and os["zVelocity"] > 0):
-				entity.zVelocity = edata["zVelocity"]
-			if edata["teleporting"]:
-				entity.position = pos
+			pass
 		else:
-			#entity.position = edata["position"]
-			if not "position1" in entity.netinfo or edata["teleporting"]:
-				entity.netinfo["position1"] = Vector2(*edata["position"])
-				entity.netinfo["time1"] = self.t - 0.050
-			else:
-				entity.netinfo["position1"] = entity.position#entity.netinfo["position2"]
-				entity.netinfo["time1"] = entity.netinfo["time2"]
-			entity.netinfo["position2"] = Vector2(*edata["position"])
-			entity.netinfo["time2"] = self.t
+			entity.position = entity.position * 0.8 + Vector2(*edata["position"]) * 0.2
 			entity.z = edata["z"]
 			entity.zVelocity = edata["zVelocity"]
 			entity.velocity = Vector2(*edata["velocity"])
@@ -99,28 +75,28 @@ class NetClient(NetCommon):
 
 		
 	def updatePlayer(self, player, pdata, game):
-		#if player == self.myPlayer:
-		#	player.xDirection = pdata["xDirection"]
-		#	player.yDirection = pdata["yDirection"]
 		if player is None:
 			print("Player is None!")
 			return
 		if player is self.myPlayer:
-			if self.t >= self.stun_t + self.latency:
+			if self.t >= self.stun_t + self.latency and self.myPlayer.clientStunTimer <= 0:
 				player.stunTimer = min(player.stunTimer, pdata["stun"] - self.latency / 2)
 		else:
 			player.stunTimer = pdata["stun"]
-		player.health = pdata["health"]
 		player.knockbackVelocity = pdata["knockback"]
+		player.health = pdata["health"]
 		player.superTicks = pdata["superTicks"]
 
-	def sendDirectionInput(self, x, y):
-		self.sendToServer({"type":"directionInput", "x" : x, "y" : y})
+	def sendPlayerPosition(self, pos):
+		self.sendToServer({"type":"playerPos", "x":pos.x, "y":pos.y})
+
+	def sendDirectionInput(self, dx, dy, pos):
+		self.sendToServer({"type":"directionInput", "dx" : dx, "dy" : dy,"x":pos.x, "y":pos.y})
 		
-	def sendButtonInput(self, button):
+	def sendButtonInput(self, button, pos):
 		if button in ["throw", "super"]:
 			self.stun_t = self.t
-		self.sendToServer({"type":"buttonInput", "button":button})
+		self.sendToServer({"type":"buttonInput", "button":button,"x":pos.x, "y":pos.y})
 		
 	def sendPlayerInfo(self, name, exString, superString):
 		self.sendToServer({"type":"playerInfo", "name":name, "super":superString, "ex":exString})

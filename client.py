@@ -74,11 +74,6 @@ class Client(Game):
 			surf = self.typingModeFont.render(">"+self.typingModeText, False, (39, 65, 62))
 			self.screen.blit(surf, (1,1))
 
-		if self.debugMode:
-			for (a,b) in self.net.debug_lines:
-				pygame.draw.line(self.screen, (255,0,0,255),a.asIntTuple(), b.asIntTuple(), 1)
-				pygame.draw.circle(self.screen, (255,255,0,255),b.asIntTuple(), 3)
-
 def run(*args):
 	game = Client(*args)
 	g.game = game

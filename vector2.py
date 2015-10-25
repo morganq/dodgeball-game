@@ -20,6 +20,9 @@ class Vector2:
 		self.y = 0.0
 		return self
 
+	def isZero(self):
+		return self.x == 0 and self.y == 0
+
 	def clone(self):
 		return Vector2(self.x, self.y)
 

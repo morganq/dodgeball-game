@@ -49,6 +49,10 @@ class Game:
 			surf = self.debugFont.render("%.2f - %.2f" % (self.net.packetSize, self.net.packetsPerSecond), False, (255, 0, 0))
 			self.screen.blit(surf, (240, 1))
 
+			for (a,b) in self.net.debug_lines:
+				pygame.draw.line(self.screen, (255,0,0,255),a.asIntTuple(), b.asIntTuple(), 1)
+				pygame.draw.circle(self.screen, (255,255,0,255),b.asIntTuple(), 3)			
+
 	def playSound(self, name):
 		pass
 

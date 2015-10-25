@@ -209,14 +209,28 @@ class NetServer(NetCommon):
 			return
 		self.startRound(game)
 
+	def updatePlayerPosFromAuthority(self, player, position):
+		old = player.getOldState(0.125)
+		if (old["position"] - position).lengthSquared() > 8*8:
+			#player.position += (position - old["position"]) / 2
+			player.position = position
+			self.debug_lines.append((old["position"], position))
+			self.debug_lines = self.debug_lines[-10:]
+
+
+	def process_playerPos(self, data, game, info):
+		c = self.getClient(info)
+		if c is None:
+			return
+		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))
 
 	def process_directionInput(self, data, game, info):
 		c = self.getClient(info)
 		if c is None:
 			return
-		c.entity.xDirection = data["x"]
-		c.entity.yDirection = data["y"]
-		c.entity.tryDash((data["x"], data["y"]))
+		c.entity.xDirection = data["dx"]
+		c.entity.yDirection = data["dy"]
+		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))
 
 	def process_buttonInput(self, data, game, info):
 		c = self.getClient(info)
@@ -228,6 +242,7 @@ class NetServer(NetCommon):
 			c.entity.tryThrow(True)
 		if data["button"] == "jump":
 			c.entity.tryJump()
+		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))	
 
 	def process_playerInfo(self, data, game, info):
 		c = self.getClient(info)
