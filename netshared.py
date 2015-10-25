@@ -28,6 +28,9 @@ class NetCommon:
 		self.packetsPerSecond = 0
 		
 		self.simulatedLatency = 0
+		self.simulatedRandomLatency = 0
+		self.simulatedRandomLatencyVal = 0
+		self.simulatedPacketloss = 0
 		self.simulatedPackets = []
 
 		self.packet_outbound_last_id = defaultdict(lambda:0)
@@ -78,7 +81,10 @@ class NetCommon:
 		try:
 			(data, info) = self.sock.recvfrom(4096)
 			#self.packetSize = len(data)
-			allPackets = self.readPacket(info, data)
+			if self.simulatedPacketloss > 0 and random.random() < self.simulatedPacketloss:
+				pass
+			else:
+				allPackets = self.readPacket(info, data)
 		except(socket.error):
 			pass
 
@@ -87,7 +93,8 @@ class NetCommon:
 			for d in allPackets:
 				self.process(d, game, info)
 		else:
-			self.simulatedPackets.extend( [(d, self.simulatedLatency, info) for d in allPackets] )
+			off = self.simulatedLatency + self.simulatedRandomLatency * random.random()
+			self.simulatedPackets.extend( [(d, off, info) for d in allPackets] )
 			thisFramePackets = [ s for s in self.simulatedPackets if s[1] <= 0]
 			self.simulatedPackets = [ s for s in self.simulatedPackets if s[1] > 0 ]
 			for (p, t, info) in thisFramePackets:

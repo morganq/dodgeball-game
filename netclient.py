@@ -3,6 +3,8 @@ from dodgeballscene import *
 from player import PlayerController
 import content
 
+TIMESYNCS = 7
+
 class NetClient(NetCommon):
 	def __init__(self, listenPort = DEFAULT_CLIENT_LISTEN_PORT):
 		NetCommon.__init__(self, listenPort)
@@ -35,15 +37,12 @@ class NetClient(NetCommon):
 		NetCommon.update(self, game, dt)
 		self.serverTime = self.t + self.serverTimeOffsetFromClientTime
 
-		if self.serverTime % 1 < 0.5 and (self.serverTime - dt) % 1 > 0.5:
-			print self.serverTime
-
 		self.timeSinceUpdate += dt
 
-		if len(self.timeSyncResponses) < 5:
+		if len(self.timeSyncResponses) < TIMESYNCS:
 			self.timeSyncTimer -= dt
 			if self.timeSyncTimer <= 0:
-				self.timeSyncTimer += 1
+				self.timeSyncTimer += 0.5
 				self.sendTimeSyncRequest()
 
 		self.pingTimer -= dt
@@ -58,8 +57,11 @@ class NetClient(NetCommon):
 				self.sendPlayerPosition(self.myPlayer.position)
 
 		for e in game.scene.sceneEntities:
-			# correct positioning
-			pass
+			if "predictedXY" in e.netinfo:
+				e.position = e.position * 0.75 + e.netinfo["predictedXY"] * 0.25
+
+			if "predictedZ" in e.netinfo:			
+				e.z = e.z * 0.75 + e.netinfo["predictedZ"] * 0.25
 
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
@@ -74,22 +76,29 @@ class NetClient(NetCommon):
 		self.pingTimestamp = self.t
 		self.sendToServer({"type":"ping"})
 
-	def updateEntity(self, entity, edata, game):
+	def updateEntity(self, time, entity, edata, game):
 		if entity is None:
 			print("Entity is None!")
 			return
 		if entity == self.myPlayer:
 			pass
 		else:
-			entity.position = Vector2(*edata["position"])
-			entity.z = edata["z"]
+			timeAgo = self.serverTime - time
+			oldState = entity.getOldState(timeAgo)
+			
+			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
+			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
+			entity.netinfo["predictedXY"] = predictedXY
+			entity.netinfo["predictedZ"] = predictedZ
+			#entity.position = Vector2(*edata["position"])
+			#entity.z = edata["z"]
 			entity.zVelocity = edata["zVelocity"]
 			entity.velocity = Vector2(*edata["velocity"])
 
 		entity.visible = edata["visible"]
 
 		
-	def updatePlayer(self, player, pdata, game):
+	def updatePlayer(self, time, player, pdata, game):
 		if player is None:
 			print("Player is None!")
 			return
@@ -123,12 +132,10 @@ class NetClient(NetCommon):
 		orig = data["client"]
 		now = self.t
 		lat = (now - orig)
-		#print data, now, lat
 		self.serverTimeOffsetFromClientTime = (data["server"] - data["client"]) - lat / 2
 		self.timeSyncResponses.append(self.serverTimeOffsetFromClientTime)
-		if len(self.timeSyncResponses) >= 5:
+		if len(self.timeSyncResponses) >= TIMESYNCS:
 			self.timeSyncResponses.sort()
-			#print self.timeSyncResponses
 			self.serverTimeOffsetFromClientTime = self.timeSyncResponses[2]
 			self.serverTime = self.t + self.serverTimeOffsetFromClientTime
 
@@ -161,16 +168,17 @@ class NetClient(NetCommon):
 		print("Connected.")
 
 	def process_state(self, data, game, info):
+		self.simulatedRandomLatency = self.simulatedRandomLatencyVal
 		self.timeSinceUpdate = 0
 		for edata in data["entities"]:
 			entity = self.lookupEntity(game.scene, edata["netid"])
 			if entity:
-				self.updateEntity(entity, edata, game)
+				self.updateEntity(data["time"], entity, edata, game)
 			#print edata
 		for pdata in data["players"]:
 			player = self.lookupEntity(game.scene, pdata["netid"])
 			if player:
-				self.updatePlayer(player, pdata, game)
+				self.updatePlayer(data["time"], player, pdata, game)
 
 	def process_pickup(self, data, game, info):
 		player = self.lookupEntity(game.scene, data["player"])

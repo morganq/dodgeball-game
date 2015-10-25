@@ -55,13 +55,10 @@ class NetServer(NetCommon):
 	def update(self, game, dt):
 		NetCommon.update(self, game, dt)
 
-		if self.t % 1 < 0.5 and (self.t - dt) % 1 > 0.5:
-			print self.t
-
 		if(game.started):
 			self.stateUpdateTimer -= dt
 			if self.stateUpdateTimer < 0:
-				self.stateUpdateTimer = 0.05 + self.stateUpdateTimer
+				self.stateUpdateTimer += 0.05
 				self.sendStateUpdate(game)
 
 			if self.ended:
@@ -88,7 +85,7 @@ class NetServer(NetCommon):
 		self.nextRoundTimer = 5.0
 
 	def sendStateUpdate(self, game):
-		data = {"type":"state", "entities":[], "players":[]}
+		data = {"type":"state", "time":self.t, "entities":[], "players":[]}
 		for e in game.scene.sceneEntities:
 			if not "ignore" in e.netinfo and "netid" in e.netinfo:
 				entity_data = self.getEntityStateData(e)
