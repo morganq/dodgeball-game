@@ -42,18 +42,22 @@ class NetServer(NetCommon):
 
 		self.score = [0,0]
 
-		try:
-			natter = win32com.client.Dispatch("HNetCfg.NATUPnP")
-			mappingPorts = natter.StaticPortMappingCollection
-			mappingPorts.Add(listenPort, "UDP", listenPort, "192.168.1.4", True, "DodgeballServer")
-		except:
-			print("Everything's fine. Don't worry about it.")
+		#try:
+		#	natter = win32com.client.Dispatch("HNetCfg.NATUPnP")
+		#	mappingPorts = natter.StaticPortMappingCollection
+		#	mappingPorts.Add(listenPort, "UDP", listenPort, "192.168.1.4", True, "DodgeballServer")
+		#except:
+		#	print("Everything's fine. Don't worry about it.")
 
 	def sendToClient(self, client, data):
 		self.sendPacket(data, client.addr, client.port)
 
 	def update(self, game, dt):
 		NetCommon.update(self, game, dt)
+
+		if self.t % 1 < 0.5 and (self.t - dt) % 1 > 0.5:
+			print self.t
+
 		if(game.started):
 			self.stateUpdateTimer -= dt
 			if self.stateUpdateTimer < 0:
@@ -201,7 +205,11 @@ class NetServer(NetCommon):
 		else:
 			self.process_ingame_hello(data, game, info, player, c)
 
-
+	def process_timeSyncRequest(self, data, game, info):
+		c = self.getClient(info)
+		if c is None or not c.admin:
+			return
+		self.sendToClient(c, {"type":"timeSyncResponse", "client":data["client"], "server":self.t})
 
 	def process_start(self, data, game, info):
 		c = self.getClient(info)

@@ -21,6 +21,10 @@ class NetClient(NetCommon):
 		self.myPlayer = None
 
 		self.stun_t = 0
+		self.serverTime = 0
+		self.serverTimeOffsetFromClientTime = 0
+		self.timeSyncResponses = []
+		self.timeSyncTimer = 0.5
 
 	def lookupEntity(self, scene, netid):
 		for e in scene.sceneEntities:
@@ -29,11 +33,22 @@ class NetClient(NetCommon):
 
 	def update(self, game, dt):
 		NetCommon.update(self, game, dt)
+		self.serverTime = self.t + self.serverTimeOffsetFromClientTime
+
+		if self.serverTime % 1 < 0.5 and (self.serverTime - dt) % 1 > 0.5:
+			print self.serverTime
+
 		self.timeSinceUpdate += dt
+
+		if len(self.timeSyncResponses) < 5:
+			self.timeSyncTimer -= dt
+			if self.timeSyncTimer <= 0:
+				self.timeSyncTimer += 1
+				self.sendTimeSyncRequest()
 
 		self.pingTimer -= dt
 		if self.pingTimer <= 0:
-			self.pingTimer = 2.0 - self.pingTimer
+			self.pingTimer += 2
 			self.sendPing()
 
 		if self.myPlayer:
@@ -66,7 +81,7 @@ class NetClient(NetCommon):
 		if entity == self.myPlayer:
 			pass
 		else:
-			entity.position = entity.position * 0.8 + Vector2(*edata["position"]) * 0.2
+			entity.position = Vector2(*edata["position"])
 			entity.z = edata["z"]
 			entity.zVelocity = edata["zVelocity"]
 			entity.velocity = Vector2(*edata["velocity"])
@@ -100,6 +115,22 @@ class NetClient(NetCommon):
 		
 	def sendPlayerInfo(self, name, exString, superString):
 		self.sendToServer({"type":"playerInfo", "name":name, "super":superString, "ex":exString})
+
+	def sendTimeSyncRequest(self):
+		self.sendToServer({"type":"timeSyncRequest", "client":self.t})
+
+	def process_timeSyncResponse(self, data, game, info):
+		orig = data["client"]
+		now = self.t
+		lat = (now - orig)
+		#print data, now, lat
+		self.serverTimeOffsetFromClientTime = (data["server"] - data["client"]) - lat / 2
+		self.timeSyncResponses.append(self.serverTimeOffsetFromClientTime)
+		if len(self.timeSyncResponses) >= 5:
+			self.timeSyncResponses.sort()
+			#print self.timeSyncResponses
+			self.serverTimeOffsetFromClientTime = self.timeSyncResponses[2]
+			self.serverTime = self.t + self.serverTimeOffsetFromClientTime
 
 	def process_start(self, data, game, info):
 		game.setScene(DodgeballScene())
@@ -181,7 +212,5 @@ class NetClient(NetCommon):
 		content.sounds[data["name"]].play()
 
 	def process_pong(self, data, game, info):
-		#self.latency = self.t - self.pingTimestamp
 		self.averagedData.add(self.t, "latency", self.t - self.pingTimestamp)
 		self.latency = self.averagedData.get_avg(self.t, "latency", 10)
-		print "latency: " + str(int(self.latency * 1000)) + " ms"
