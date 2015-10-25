@@ -18,7 +18,7 @@ class NetCommon:
 		#Make a UDP socket
 		self.sock = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 		self.sock.bind( ("0.0.0.0", listenPort) )
-		self.sock.settimeout(0)
+		self.sock.settimeout(0.01)
 		self.packetSize = 0
 		self.t = 0
 		
@@ -79,7 +79,7 @@ class NetCommon:
 
 		allPackets = []
 		try:
-			(data, info) = self.sock.recvfrom(4096)
+			(data, info) = self.sock.recvfrom(1024)
 			#self.packetSize = len(data)
 			if self.simulatedPacketloss > 0 and random.random() < self.simulatedPacketloss:
 				pass

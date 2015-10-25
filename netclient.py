@@ -57,11 +57,12 @@ class NetClient(NetCommon):
 				self.sendPlayerPosition(self.myPlayer.position)
 
 		for e in game.scene.sceneEntities:
-			if "predictedXY" in e.netinfo:
-				e.position = e.position * 0.75 + e.netinfo["predictedXY"] * 0.25
+			pass
+			#if "predictedXY" in e.netinfo:
+				#e.position = e.position * 0.75 + e.netinfo["predictedXY"] * 0.25 + e.velocity * dt
 
-			if "predictedZ" in e.netinfo:			
-				e.z = e.z * 0.75 + e.netinfo["predictedZ"] * 0.25
+			#if "predictedZ" in e.netinfo:			
+				#e.z = e.z * 0.75 + e.netinfo["predictedZ"] * 0.25 + e.zVelocity * dt
 
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
@@ -85,11 +86,18 @@ class NetClient(NetCommon):
 		else:
 			timeAgo = self.serverTime - time
 			oldState = entity.getOldState(timeAgo)
+
+			if entity.name == "ball":
+				print edata["velocity"]
 			
 			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
 			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
 			entity.netinfo["predictedXY"] = predictedXY
 			entity.netinfo["predictedZ"] = predictedZ
+			if (predictedXY - entity.position).lengthSquared() > 8*8:
+				entity.position = predictedXY
+			if abs(predictedZ - entity.z) > 8:
+				entity.z = predictedZ
 			#entity.position = Vector2(*edata["position"])
 			#entity.z = edata["z"]
 			entity.zVelocity = edata["zVelocity"]
