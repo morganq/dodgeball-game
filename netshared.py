@@ -27,7 +27,7 @@ class NetCommon:
 		self.packetTimestamps = []
 		self.packetsPerSecond = 0
 		
-		self.simulatedLatency = 0.1
+		self.simulatedLatency = 0
 		self.simulatedPackets = []
 
 		self.packet_outbound_last_id = defaultdict(lambda:0)
