@@ -79,7 +79,7 @@ class NetCommon:
 
 		allPackets = []
 		try:
-			(data, info) = self.sock.recvfrom(1024)
+			(data, info) = self.sock.recvfrom(4096)
 			#self.packetSize = len(data)
 			if self.simulatedPacketloss > 0 and random.random() < self.simulatedPacketloss:
 				pass
