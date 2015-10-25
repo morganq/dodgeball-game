@@ -20,6 +20,8 @@ class Game:
 		self.elapsed = 0
 		
 		self.started = False
+		self.debugFont = pygame.font.Font("visitor1.ttf", 10)
+		self.debugMode = False		
 
 		self.admin = False
 		self.score = [0, 0]
@@ -43,7 +45,9 @@ class Game:
 		pass
 		
 	def postDraw(self):
-		pass
+		if self.debugMode:
+			surf = self.debugFont.render("%.2f - %.2f" % (self.net.packetSize, self.net.packetsPerSecond), False, (255, 0, 0))
+			self.screen.blit(surf, (240, 1))
 
 	def playSound(self, name):
 		pass
@@ -56,6 +60,8 @@ class Game:
 				if event.type == pygame.KEYDOWN:
 					if event.key == pygame.K_ESCAPE:
 						sys.exit()
+					if event.key == pygame.K_d:
+						self.debugMode = not self.debugMode
 				self.handleEvent(event)
 
 		self.net.update(self, dt)

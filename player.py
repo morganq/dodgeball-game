@@ -73,7 +73,6 @@ class Player(Sprite):
 		self.throwTimer = 0.0
 		self.hitTimer = 0.0
 		
-		self.oldStates = []
 		self.correctPosition = Vector2(0,0)
 
 	def holdingForward(self):
@@ -253,43 +252,12 @@ class Player(Sprite):
 				g.game.net.broadcast({"type":"animation", "netid":self.netinfo["netid"], "name":self.currentAnimation.name})
 		self.lastAnimation = self.currentAnimation
 
-		st = {
-			"z":self.z,
-			"zVelocity":self.zVelocity,
-			"position":self.position,
-			"t" : 0.0}
-		self.oldStates.append(st)
-		self.oldStates = [s for s in self.oldStates if s["t"] < 1.0]
-		for s in self.oldStates:
-			s["t"] += dt
+		
 
 		if not g.SERVER and self.correctPosition is not None:
 			#print self.correctPosition
 			self.position -= self.correctPosition * dt * 5
 			self.correctPosition -= self.correctPosition * dt * 5
-
-	def getOldState(self, t):
-		prev = None
-		for i in range(len(self.oldStates)):
-			next = self.oldStates[i]
-			if next["t"] < t:
-				prev = self.oldStates[i-1]
-				break
-
-		if not prev:
-			return next
-
-		tt = prev["t"] - next["t"]
-		mt = prev["t"] - t
-		mh = mt / tt
-		ml = 1-mh
-		newState = {
-			"position":next["position"] * mh + prev["position"] * ml,
-			"z":next["z"] * mh + prev["z"] * ml,
-			"zVelocity":next["zVelocity"] * mh + prev["zVelocity"] * ml,
-			"t":next["t"] * mh + prev["t"] * ml,
-		}
-		return newState
 
 	def serverplay(self, name):
 		if g.SERVER:
@@ -362,7 +330,7 @@ class Player(Sprite):
 			self.holding.throw()
 			self.holding.thrower = self
 			if forward:
-				self.holding.position.x += (-15, 15)[self.team]
+				#self.holding.position.x += (-15, 15)[self.team]
 				self.holding.z += 8
 			g.game.net.sendThrowMessage(self, self.holding, self.holding.velocity, self.holding.zVelocity, self.holding.mode)
 			self.holding = None

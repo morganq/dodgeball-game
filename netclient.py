@@ -20,6 +20,8 @@ class NetClient(NetCommon):
 
 		self.stun_t = 0
 
+		self.debug_lines = []
+
 	def lookupEntity(self, scene, netid):
 		for e in scene.sceneEntities:
 			if "netid" in e.netinfo and e.netinfo["netid"] == netid:
@@ -44,7 +46,12 @@ class NetClient(NetCommon):
 				deltap = p2 - p1
 				tval = ((self.t - deltat) - t1) / deltat
 				correctPos = deltap * tval + p1
-				e.position = e.position * 0.5 + correctPos * 0.5
+				oldState = e.getOldState(self.latency)
+				if (oldState["position"] - correctPos).lengthSquared() > 8*8 and (e.position - correctPos).lengthSquared() > 8*8:
+					#print "stuff"
+					self.debug_lines.append((e.position, correctPos))
+					self.debug_lines = self.debug_lines[-10:]
+					e.position = e.position * 0.9 + correctPos * 0.1
 
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
@@ -198,5 +205,7 @@ class NetClient(NetCommon):
 		content.sounds[data["name"]].play()
 
 	def process_pong(self, data, game, info):
-		self.latency = self.t - self.pingTimestamp
-		print "latency (ping+pong): " + str(self.latency)
+		#self.latency = self.t - self.pingTimestamp
+		self.averagedData.add(self.t, "latency", self.t - self.pingTimestamp)
+		self.latency = self.averagedData.get_avg(self.t, "latency", 10)
+		print "latency: " + str(int(self.latency * 1000)) + " ms"

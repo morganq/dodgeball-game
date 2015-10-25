@@ -27,7 +27,7 @@ class Ball(Sprite):
 
 	def throw(self):
 		self.held = False
-		self.timeSinceThrow = -0.375
+		self.timeSinceThrow = 0
 
 	def update(self, dt):
 		Sprite.update(self, dt)

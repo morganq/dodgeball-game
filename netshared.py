@@ -6,6 +6,7 @@ import socket
 from player import Player
 from ball import Ball
 from supernode import *
+from averageddata import *
 import zlib
 import g
 import pygame
@@ -33,6 +34,8 @@ class NetCommon:
 		self.packet_inbound_last_id = defaultdict(lambda:0)
 		self.packetloss = defaultdict(lambda:0)
 
+		self.averagedData = AveragedData()
+
 		self.netinfotimer = 1.0
 
 	def readPacket(self, info, data):
@@ -46,7 +49,12 @@ class NetCommon:
 			self.packetloss[addrportstr] += 1
 		self.packet_inbound_last_id[addrportstr] = pid
 
-		self.packetTimestamps.append(self.t)
+		self.averagedData.add(self.t, "packets")
+		self.averagedData.add(self.t, "packetsize", len(data))
+
+		if self.packet_inbound_last_id[addrportstr] > 0:
+			packetloss = self.packetloss[addrportstr] / float(self.packet_inbound_last_id[addrportstr])
+			self.averagedData.add(self.t, "packetloss_" + addrportstr, packetloss)
 
 		return [unpacked]
 
@@ -61,10 +69,8 @@ class NetCommon:
 		
 		self.t = pygame.time.get_ticks() / 1000.0
 
-		self.packetTimestamps = filter(lambda x:x > self.t-1, self.packetTimestamps)
-		self.packetsPerSecond = len(self.packetTimestamps)
-
-		#print self.packetsPerSecond
+		self.packetsPerSecond = self.averagedData.get_ct(self.t, "packets", 1.0)
+		self.packetSize = self.averagedData.get_avg(self.t, "packetsize", 5.0)
 
 		allPackets = []
 		try:
@@ -86,13 +92,6 @@ class NetCommon:
 				self.process(p, game, info)
 			self.simulatedPackets = [ (s[0], s[1] - dt, s[2]) for s in self.simulatedPackets ]
 
-		self.netinfotimer -= dt
-		if self.netinfotimer <= 0:
-			self.netinfotimer += 1
-			for k,v in self.packet_inbound_last_id.items():
-				x = self.packetloss[k]
-				if v > 0:
-					print "packet loss for " + k + "\t" + str( (float(x) * 100 / float(v))) + "%"
 
 	def process(self, data, game, info):
 		if(hasattr(self, "process_" + data["type"])):
