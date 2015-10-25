@@ -125,6 +125,10 @@ class NetServer(NetCommon):
 		for c in self.clients:
 			self.sendPacket(data, c.addr, c.port)
 
+	def ensuredBroadcast(self, data):
+		for c in self.clients:
+			self.sendEnsuredPacket(data, c.addr, c.port)		
+
 	def spawn(self, ent, name, extra = {}):
 		ent.netinfo["netid"] = self.netidcounter
 		self.allentities.append(ent)
@@ -132,7 +136,7 @@ class NetServer(NetCommon):
 		data = {"type":"spawn", "name":name, "position":ent.position, "netinfo":ent.netinfo, "args" : []}
 		for k, v in extra.items():
 			data[k] = v
-		self.broadcast(data)
+		self.ensuredBroadcast(data)
 
 	def sendPickupMessage(self, player, ball):
 		self.broadcast({"type":"pickup", "player":player.netinfo["netid"], "ball":ball.netinfo["netid"]})
@@ -142,7 +146,7 @@ class NetServer(NetCommon):
 		"velocity":velocity, "zVelocity": zVel, "mode":mode, "team":player.team})
 
 	def startRound(self, game):
-		self.broadcast({"type":"start"})
+		self.ensuredBroadcast({"type":"start"})
 		self.ended = False
 		game.started = True
 		game.setScene(DodgeballScene())
