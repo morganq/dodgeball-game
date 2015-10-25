@@ -6,3 +6,4 @@ dodgeball/
 *.rar
 *.psd
 config.json
+.DS_Store

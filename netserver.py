@@ -45,7 +45,7 @@ class NetServer(NetCommon):
 		try:
 			natter = win32com.client.Dispatch("HNetCfg.NATUPnP")
 			mappingPorts = natter.StaticPortMappingCollection
-			mappingPorts.Add(listenPort, "UDP", listenPort, socket.gethostbyname(socket.gethostname()), True, "DodgeballServer")
+			mappingPorts.Add(listenPort, "UDP", listenPort, "192.168.1.4", True, "DodgeballServer")
 		except:
 			print("Everything's fine. Don't worry about it.")
 

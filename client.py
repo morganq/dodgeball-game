@@ -2,7 +2,7 @@ from game import Game
 from netclient import NetClient
 from netshared import *
 import g
-
+import time
 import pygame
 import sys
 
@@ -17,6 +17,7 @@ class Client(Game):
 		Game.__init__(self, 0)
 		self.net = NetClient(int(port))
 		self.net.connect(addr)
+		time.sleep(1)
 		self.net.sendPlayerInfo(name, ex, super)
 		self.controller = None
 		g.SERVER = False
