@@ -52,6 +52,9 @@ class NetServer(NetCommon):
 	def sendToClient(self, client, data):
 		self.sendPacket(data, client.addr, client.port)
 
+	def sendEnsuredToClient(self, client, data):
+		self.sendEnsuredPacket(data, client.addr, client.port)		
+
 	def update(self, game, dt):
 		NetCommon.update(self, game, dt)
 
@@ -198,7 +201,7 @@ class NetServer(NetCommon):
 		if len(self.clients) == 0:
 			c.admin = True
 		self.clients.append(c)
-		self.sendToClient(c, {"type": "id", "cid": c.cid, "admin":c.admin} )
+		self.sendEnsuredToClient(c, {"type": "id", "cid": c.cid, "admin":c.admin} )
 
 		if not game.started:
 			self.process_pregame_hello(data, game, info)
@@ -208,8 +211,10 @@ class NetServer(NetCommon):
 
 	def process_timeSyncRequest(self, data, game, info):
 		c = self.getClient(info)
-		if c is None or not c.admin:
+		print c
+		if c is None:
 			return
+		print "time sync " + str(data["client"]) + " : " + str(self.t)
 		self.sendToClient(c, {"type":"timeSyncResponse", "client":data["client"], "server":self.t})
 
 	def process_start(self, data, game, info):
@@ -218,20 +223,24 @@ class NetServer(NetCommon):
 			return
 		self.startRound(game)
 
-	def updatePlayerPosFromAuthority(self, player, position):
-		old = player.getOldState(0.125)
-		if (old["position"] - position).lengthSquared() > 8*8:
-			#player.position += (position - old["position"]) / 2
-			player.position = position
-			self.debug_lines.append((old["position"], position))
-			self.debug_lines = self.debug_lines[-10:]
+	def updatePlayerPosFromAuthority(self, t, player, position):
+		ago = self.t - t
+		ago = 0
+		old = player.getOldState(ago)
+		predictedXY = position + old["velocity"] * ago
+		confidence = 1 - (min(0.5, max(0,ago)) * 2)
+		confidence = 1.0
+		#player.position = predictedXY * confidence + player.position * (1-confidence)
+		if (predictedXY - player.position).lengthSquared() > 4*4:
+			#player.position = predictedXY * confidence + player.position * (1-confidence)
+			player.position = predictedXY
 
 
 	def process_playerPos(self, data, game, info):
 		c = self.getClient(info)
 		if c is None:
 			return
-		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))
+		self.updatePlayerPosFromAuthority(data["time"], c.entity, Vector2(data["x"], data["y"]))
 
 	def process_directionInput(self, data, game, info):
 		c = self.getClient(info)
@@ -239,7 +248,7 @@ class NetServer(NetCommon):
 			return
 		c.entity.xDirection = data["dx"]
 		c.entity.yDirection = data["dy"]
-		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))
+		self.updatePlayerPosFromAuthority(data["time"], c.entity, Vector2(data["x"], data["y"]))
 
 	def process_buttonInput(self, data, game, info):
 		c = self.getClient(info)
@@ -251,7 +260,7 @@ class NetServer(NetCommon):
 			c.entity.tryThrow(True)
 		if data["button"] == "jump":
 			c.entity.tryJump()
-		self.updatePlayerPosFromAuthority(c.entity, Vector2(data["x"], data["y"]))	
+		self.updatePlayerPosFromAuthority(data["time"], c.entity, Vector2(data["x"], data["y"]))	
 
 	def process_playerInfo(self, data, game, info):
 		c = self.getClient(info)

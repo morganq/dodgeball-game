@@ -88,17 +88,16 @@ class NetClient(NetCommon):
 			pass
 		else:
 			timeAgo = self.serverTime - time
+			timeAgo /= 2
 			oldState = entity.getOldState(timeAgo)
-			
-			if entity.name == "player":
-				print edata["velocity"]
 
 			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
 			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
 
-			confidence = 1 - (min(0.5, max(0,timeAgo)) * 2)
+			#confidence = 1 - (min(0.5, max(0,timeAgo)) * 2)
+			confidence = 1
 
-			if (predictedXY - entity.position).lengthSquared() > 8*8:
+			if (predictedXY - entity.position).lengthSquared() > 4*4:
 				entity.position = predictedXY * confidence + entity.position * (1-confidence)
 			if abs(predictedZ - entity.z) > 3:
 				entity.z = predictedZ * confidence + entity.z * (1-confidence)
@@ -122,17 +121,19 @@ class NetClient(NetCommon):
 		player.knockbackVelocity = pdata["knockback"]
 		player.health = pdata["health"]
 		player.superTicks = pdata["superTicks"]
+		player.xDirection = pdata["xDirection"]
+		player.yDirection = pdata["yDirection"]
 
 	def sendPlayerPosition(self, pos):
-		self.sendToServer({"type":"playerPos", "x":pos.x, "y":pos.y})
+		self.sendToServer({"type":"playerPos", "time":self.serverTime, "x":pos.x, "y":pos.y})
 
 	def sendDirectionInput(self, dx, dy, pos):
-		self.sendToServer({"type":"directionInput", "dx" : dx, "dy" : dy,"x":pos.x, "y":pos.y})
+		self.sendToServer({"type":"directionInput", "time":self.serverTime, "dx" : dx, "dy" : dy,"x":pos.x, "y":pos.y})
 		
 	def sendButtonInput(self, button, pos):
 		if button in ["throw", "super"]:
 			self.stun_t = self.t
-		self.sendToServer({"type":"buttonInput", "button":button,"x":pos.x, "y":pos.y})
+		self.sendToServer({"type":"buttonInput", "time":self.serverTime, "button":button,"x":pos.x, "y":pos.y})
 		
 	def sendPlayerInfo(self, name, exString, superString):
 		self.sendEnsuredToServer({"type":"playerInfo", "name":name, "super":superString, "ex":exString})

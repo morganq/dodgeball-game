@@ -27,9 +27,9 @@ class NetCommon:
 		self.packetTimestamps = []
 		self.packetsPerSecond = 0
 		
-		self.simulatedLatency = 0
+		self.simulatedLatency = 0.0
 		self.simulatedRandomLatency = 0
-		self.simulatedRandomLatencyVal = 0
+		self.simulatedRandomLatencyVal = 0.0
 		self.simulatedPacketloss = 0
 		self.simulatedPackets = []
 
@@ -74,6 +74,7 @@ class NetCommon:
 
 		allPackets = []
 		to_remove = []
+		self.ensured_packets_received_early[addrportstr].sort(lambda a,b:cmp(a["ensured_id"], b["ensured_id"]))
 		for p in self.ensured_packets_received_early[addrportstr]:
 			print "resolving old " + str(unpacked["ensured_id"])
 			if p["ensured_id"] == self.ensured_recv_packet_ids[addrportstr]+1:
@@ -157,7 +158,8 @@ class NetCommon:
 		except socket.timeout:
 			pass
 		except socket.error as err:
-			print err
+			#print err
+			pass
 
 		#print self.simulatedPackets
 		if self.simulatedLatency == 0:

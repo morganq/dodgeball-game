@@ -23,6 +23,7 @@ class Entity:
 		return st
 
 	def getOldState(self, t):
+		next = self.recordState()
 		prev = None
 		for i in range(len(self.oldStates)):
 			next = self.oldStates[i]

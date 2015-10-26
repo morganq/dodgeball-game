@@ -57,7 +57,10 @@ class Client(Game):
 
 				if evt.key == pygame.K_RETURN and self.started:
 					self.typingMode = True
-					self.net.sendDirectionInput(0,0)
+					self.net.sendDirectionInput(0,0,self.controller.player.position)
+
+				if evt.key == pygame.K_d:
+					self.debugMode = not self.debugMode					
 
 
 		if self.controller and not self.typingMode and not self.pauseInput:
