@@ -90,14 +90,18 @@ class NetClient(NetCommon):
 			timeAgo = self.serverTime - time
 			oldState = entity.getOldState(timeAgo)
 			
+			if entity.name == "player":
+				print edata["velocity"]
+
 			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
 			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
-			entity.netinfo["predictedXY"] = predictedXY
-			entity.netinfo["predictedZ"] = predictedZ
+
+			confidence = 1 - (min(0.5, max(0,timeAgo)) * 2)
+
 			if (predictedXY - entity.position).lengthSquared() > 8*8:
-				entity.position = predictedXY
+				entity.position = predictedXY * confidence + entity.position * (1-confidence)
 			if abs(predictedZ - entity.z) > 3:
-				entity.z = predictedZ
+				entity.z = predictedZ * confidence + entity.z * (1-confidence)
 			#entity.position = Vector2(*edata["position"])
 			#entity.z = edata["z"]
 			entity.zVelocity = edata["zVelocity"]
