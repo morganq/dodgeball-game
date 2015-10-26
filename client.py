@@ -5,6 +5,7 @@ import g
 import time
 import pygame
 import sys
+import random
 
 unShiftKeys = list("qwertyuiopasdfghjklzxcvbnm1234567890-=`[];',./")
 shiftKeys = {
@@ -15,7 +16,8 @@ shiftKeys = {
 class Client(Game):
 	def __init__(self, addr, port = DEFAULT_CLIENT_LISTEN_PORT, name = "player", ex = "", super = ""):
 		Game.__init__(self, 0)
-		self.net = NetClient(int(port))
+		#self.net = NetClient(int(port))
+		self.net = NetClient(random.randint(2113, 5000))
 		self.net.connect(addr)
 		#time.sleep(1)
 		self.net.sendPlayerInfo(name, ex, super)
@@ -76,6 +78,10 @@ class Client(Game):
 		if self.typingMode:
 			surf = self.typingModeFont.render(">"+self.typingModeText, False, (39, 65, 62))
 			self.screen.blit(surf, (1,1))
+
+		if self.debugMode:
+			surf = self.debugFont.render("%d ms" % (self.net.latency * 1000, ), False, (255, 0, 0))
+			self.screen.blit(surf, (240, 13))				
 
 def run(*args):
 	game = Client(*args)

@@ -183,7 +183,7 @@ class NetServer(NetCommon):
 		self.broadcast({"type":"sound", "name":name})
 
 	def process_pregame_hello(self, data, game, info):
-		self.broadcast({"type":"numplayers","value":len(self.clients)})
+		self.ensuredBroadcast({"type":"numplayers","value":len(self.clients)})
 		print(info[0] + " joined the game.")
 		game.scene.playersInGame += 1
 
