@@ -4,6 +4,7 @@ from player import PlayerController
 import content
 
 TIMESYNCS = 7
+ENTITY_TIME_BACK = 0.25
 
 class NetClient(NetCommon):
 	def __init__(self, listenPort = DEFAULT_CLIENT_LISTEN_PORT):
@@ -56,13 +57,29 @@ class NetClient(NetCommon):
 				self.playerPosUpdateTimer += 0.25
 				self.sendPlayerPosition(self.myPlayer.position)
 
+		targettime = self.serverTime - ENTITY_TIME_BACK
 		for e in game.scene.sceneEntities:
-			pass
-			#if "predictedXY" in e.netinfo:
-				#e.position = e.position * 0.75 + e.netinfo["predictedXY"] * 0.25 + e.velocity * dt
+			if "historical_positions" in e.netinfo:
+				histpos = e.netinfo["historical_positions"]
+				i = len(histpos) - 2
+				while i >= 0:
+					(t1, pos1) = histpos[i]
+					if t1 < targettime:
+						if i + 2 >= len(histpos):
+							print "ono"
+						(t2, pos2) = histpos[i+1]
+						dt = t2 - t1
+						dpos = pos2 - pos1
+						mid = (targettime - t1) / dt
+						#print mid
+						e.position = pos1 + dpos * mid
+						e.velocity.zero()
+						break
+					i -= 1
+				print len(histpos) - i
+				
 
-			#if "predictedZ" in e.netinfo:			
-				#e.z = e.z * 0.75 + e.netinfo["predictedZ"] * 0.25 + e.zVelocity * dt
+
 
 	def connect(self, addr, port = DEFAULT_SERVER_LISTEN_PORT):
 		self.sendAddr = addr
@@ -88,23 +105,10 @@ class NetClient(NetCommon):
 			pass
 		else:
 			timeAgo = self.serverTime - time
-			timeAgo /= 2
-			oldState = entity.getOldState(timeAgo)
-
-			predictedXY = Vector2(*edata["position"]) + oldState["velocity"] * timeAgo
-			predictedZ = edata["z"] + oldState["zVelocity"] * timeAgo
-
-			#confidence = 1 - (min(0.5, max(0,timeAgo)) * 2)
-			confidence = 1
-
-			if (predictedXY - entity.position).lengthSquared() > 4*4:
-				entity.position = predictedXY * confidence + entity.position * (1-confidence)
-			if abs(predictedZ - entity.z) > 3:
-				entity.z = predictedZ * confidence + entity.z * (1-confidence)
-			#entity.position = Vector2(*edata["position"])
-			#entity.z = edata["z"]
-			entity.zVelocity = edata["zVelocity"]
-			entity.velocity = Vector2(*edata["velocity"])
+			if "historical_positions" not in entity.netinfo:
+				entity.netinfo["historical_positions"] = []
+			entity.netinfo["historical_positions"].append((time, Vector2(*edata["position"])))
+			entity.netinfo["historical_positions"] = filter(lambda x:x[0] > self.serverTime - 3, entity.netinfo["historical_positions"])
 
 		entity.visible = edata["visible"]
 

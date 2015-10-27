@@ -12,6 +12,8 @@ import g
 import pygame
 from collections import defaultdict
 
+TICKTIME = 0.05
+
 class NetCommon:
 	netEntities = { "player": Player, "ball": Ball }
 	def __init__(self, listenPort):
@@ -27,9 +29,9 @@ class NetCommon:
 		self.packetTimestamps = []
 		self.packetsPerSecond = 0
 		
-		self.simulatedLatency = 0.0
+		self.simulatedLatency = 0
 		self.simulatedRandomLatency = 0
-		self.simulatedRandomLatencyVal = 0.0
+		self.simulatedRandomLatencyVal = 0
 		self.simulatedPacketloss = 0
 		self.simulatedPackets = []
 
@@ -113,7 +115,7 @@ class NetCommon:
 	def sendEnsuredPacket(self, data, addr, port):
 		addrportstr = addr + ":" + str(port)		
 		ensured_id = self.ensured_send_packet_ids[addrportstr]
-		print "sending ensured " + str(ensured_id)
+		print "sending ensured " + str(ensured_id) + " : " + data["type"]
 		data["packet_id"] = self.packet_outbound_last_id[addrportstr]
 		self.packet_outbound_last_id[addrportstr] += 1		
 		data["ensured_id"] = ensured_id

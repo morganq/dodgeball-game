@@ -61,7 +61,7 @@ class NetServer(NetCommon):
 		if(game.started):
 			self.stateUpdateTimer -= dt
 			if self.stateUpdateTimer < 0:
-				self.stateUpdateTimer += 0.05
+				self.stateUpdateTimer += TICKTIME
 				self.sendStateUpdate(game)
 
 			if self.ended:
