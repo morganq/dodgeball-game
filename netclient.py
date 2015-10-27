@@ -4,7 +4,7 @@ from player import PlayerController
 import content
 
 TIMESYNCS = 7
-ENTITY_TIME_BACK = 0.25
+ENTITY_TIME_BACK = 0.3
 
 class NetClient(NetCommon):
 	def __init__(self, listenPort = DEFAULT_CLIENT_LISTEN_PORT):
