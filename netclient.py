@@ -2,6 +2,7 @@ from netshared import *
 from dodgeballscene import *
 from player import PlayerController
 import content
+import math
 
 TIMESYNCS = 7
 ENTITY_TIME_BACK = 0.25
@@ -59,24 +60,39 @@ class NetClient(NetCommon):
 
 		targettime = self.serverTime - ENTITY_TIME_BACK
 		for e in game.scene.sceneEntities:
-			if "historical_positions" in e.netinfo:
+			serverAuthority = 1.0
+			if e.name == "ball" and e.thrower == self.myPlayer and "throwClientTime" in e.netinfo:
+				pass
+			elif "historical_positions" in e.netinfo:
 				histpos = e.netinfo["historical_positions"]
 				i = len(histpos) - 2
 				while i >= 0:
 					(t1, pos1) = histpos[i]
 					if t1 < targettime:
 						if i + 2 >= len(histpos):
-							print "ono"
+							#print "ono"
+							pass
 						(t2, pos2) = histpos[i+1]
 						dt = t2 - t1
 						dpos = pos2 - pos1
 						mid = (targettime - t1) / dt
 						#print mid
-						e.position = pos1 + dpos * mid
-						e.velocity.zero()
+						if e.name == "ball":
+							e.position = pos1 + dpos * mid
+							#e.velocity = pos * dt
+							#e.velocity.zero()
+						if e.name == "player":
+							offset = pos2 - e.position
+							dist = offset.length()
+							if dist > 4:
+								e.xDirection = round(round(offset.x / dist * 2) / 2)
+								e.yDirection = round(round(offset.y / dist * 2) / 2)
+							else:
+								e.xDirection = 0
+								e.yDirection = 0
 						break
 					i -= 1
-				print len(histpos) - i
+				#print e.name, len(histpos) - i
 				
 
 
@@ -110,6 +126,23 @@ class NetClient(NetCommon):
 			entity.netinfo["historical_positions"].append((time, Vector2(*edata["position"])))
 			entity.netinfo["historical_positions"] = filter(lambda x:x[0] > self.serverTime - 3, entity.netinfo["historical_positions"])
 
+			if entity.name == "ball" and entity.thrower == self.myPlayer and "throwClientTime" in entity.netinfo:
+				if "throwServerTime" in entity.netinfo:
+					ballAgo = timeAgo + (entity.netinfo["throwServerTime"] - entity.netinfo["throwClientTime"])
+					oldState = entity.getOldState(ballAgo)
+					authPos = Vector2(*edata["position"])
+					authVel = Vector2(*edata["velocity"])
+					#print entity.position, authPos, oldState["position"]
+					offset = (authPos - oldState["position"]) / 2
+					voffset = (authVel - oldState["velocity"]) / 2
+					#if offset.lengthSquared() > 8*8:
+					#print "FIX"
+					entity.position += offset
+					entity.velocity += voffset
+					entity.reviseHistory({"position":offset, "velocity":voffset})
+					#del entity.netinfo["throwClientTime"]
+					#del entity.netinfo["throwServerTime"]
+
 		entity.visible = edata["visible"]
 
 		
@@ -118,15 +151,16 @@ class NetClient(NetCommon):
 			print("Player is None!")
 			return
 		if player is self.myPlayer:
-			if self.t >= self.stun_t + self.latency and self.myPlayer.clientStunTimer <= 0:
-				player.stunTimer = min(player.stunTimer, pdata["stun"] - self.latency / 2)
+			pass
+			#if self.t >= self.stun_t + self.latency and self.myPlayer.clientStunTimer <= 0:
+			#	player.stunTimer = min(player.stunTimer, pdata["stun"] - self.latency / 2)
 		else:
 			player.stunTimer = pdata["stun"]
 		player.knockbackVelocity = pdata["knockback"]
 		player.health = pdata["health"]
 		player.superTicks = pdata["superTicks"]
-		player.xDirection = pdata["xDirection"]
-		player.yDirection = pdata["yDirection"]
+		#player.xDirection = pdata["xDirection"]
+		#player.yDirection = pdata["yDirection"]
 
 	def sendPlayerPosition(self, pos):
 		self.sendToServer({"type":"playerPos", "time":self.serverTime, "x":pos.x, "y":pos.y})
@@ -137,6 +171,13 @@ class NetClient(NetCommon):
 	def sendButtonInput(self, button, pos):
 		if button in ["throw", "super"]:
 			self.stun_t = self.t
+			# TEST
+			if self.myPlayer.holding:
+				self.myPlayer.holding.netinfo["throwClientTime"] = self.serverTime
+				self.myPlayer.tryThrow(button=="super")
+			else:
+				self.myPlayer.tryThrow(button=="super")
+			
 		self.sendToServer({"type":"buttonInput", "time":self.serverTime, "button":button,"x":pos.x, "y":pos.y})
 		
 	def sendPlayerInfo(self, name, exString, superString):
@@ -144,6 +185,12 @@ class NetClient(NetCommon):
 
 	def sendTimeSyncRequest(self):
 		self.sendToServer({"type":"timeSyncRequest", "client":self.t})
+
+	def process_badClientSideCatch(self, data, game, info):
+		if self.myPlayer.holding:
+			print "bad catch!!"
+			self.myPlayer.holding.held = False
+			self.myPlayer.holding = None
 
 	def process_timeSyncResponse(self, data, game, info):
 		orig = data["client"]
@@ -172,11 +219,11 @@ class NetClient(NetCommon):
 		game.scene.add(ent)
 
 		if data["name"] == "player":
-			ent.initialize()
 			if  data["owner"] == self.cid:
 				controller = PlayerController(ent, self)
 				self.myPlayer = ent
 				game.controller = controller
+			ent.initialize()
 
 	def process_id(self, data, game, info):
 		self.cid = data["cid"]
@@ -201,12 +248,20 @@ class NetClient(NetCommon):
 	def process_pickup(self, data, game, info):
 		player = self.lookupEntity(game.scene, data["player"])
 		ball = self.lookupEntity(game.scene, data["ball"])
+		if "throwServerTime" in ball.netinfo:
+			del ball.netinfo["throwServerTime"]
+		if "throwClientTime" in ball.netinfo:
+			del ball.netinfo["throwClientTime"]
 		player.holding = ball
 		ball.held = True
 
 	def process_throw(self, data, game, info):
 		player = self.lookupEntity(game.scene, data["player"])
 		ball = self.lookupEntity(game.scene, data["ball"])
+		if player == self.myPlayer and "throwClientTime" in ball.netinfo:
+			print "got my throw mess"
+			ball.netinfo["throwServerTime"] = data["time"]
+			return		
 		player.holding = None
 		ball.velocity = data["velocity"]
 		ball.zVelocity = data["zVelocity"]
@@ -222,7 +277,7 @@ class NetClient(NetCommon):
 		
 	def process_animation(self, data, game, info):
 		p = self.lookupEntity(game.scene, data["netid"])
-		if p is not None:
+		if p is not None and p is not self.myPlayer:
 			p.play(data["name"])
 
 	def process_endround(self, data, game, info):

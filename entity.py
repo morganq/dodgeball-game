@@ -47,5 +47,10 @@ class Entity:
 		ml = 1 - mh
 		return {"t":next["t"] * mh + prev["t"] * ml}
 
+	def reviseHistory(self, revision):
+		for s in self.oldStates:
+			for k,v in revision.items():
+				s[k] += v
+
 	def draw(self, screen):
 		pass

@@ -56,6 +56,9 @@ class Player(Sprite):
 		#particle timer
 		self.pTimer = 0
 
+		self.localPlayer = False
+		self.localPlayerAnimationName = "stand"
+
 	def initialize(self):
 		self.health = 100
 		
@@ -76,6 +79,9 @@ class Player(Sprite):
 		self.dashVelocity = Vector2(0,0)
 		
 		self.correctPosition = Vector2(0,0)
+
+		self.localPlayer = not g.SERVER and g.game.net.myPlayer == self
+
 
 	def holdingForward(self):
 		return self.xDirection == (1, -1)[self.team]
@@ -128,9 +134,6 @@ class Player(Sprite):
 
 		xd = self.xDirection
 		yd = self.yDirection
-		
-
-
 		
 		if self.z <= 0:
 			if self.team == 0 and self.position.x < MID-10:
@@ -245,8 +248,8 @@ class Player(Sprite):
 			self.holding.position = self.position + Vector2(xo, 1)
 			self.holding.z = 6 + self.z
 
-		if g.SERVER:
-			self.serverCheckBallCollision()
+		#if g.SERVER:
+		self.serverCheckBallCollision()
 
 
 		if self.z > 0:
@@ -262,14 +265,21 @@ class Player(Sprite):
 
 		self.collideWalls()
 
+		if self.localPlayer:
+			self.play(self.localPlayerAnimationName)
+
 		if g.SERVER:
 			if self.currentAnimation != self.lastAnimation:
 				g.game.net.broadcast({"type":"animation", "netid":self.netinfo["netid"], "name":self.currentAnimation.name})
-		self.lastAnimation = self.currentAnimation
+		self.lastAnimation = self.currentAnimation	
 
 	def serverplay(self, name):
 		if g.SERVER:
 			self.play(name)
+		else:
+			if self.localPlayer:
+				self.localPlayerAnimationName = name
+				
 
 	def tryThrow(self, super = False):
 
@@ -283,6 +293,7 @@ class Player(Sprite):
 		if self.holding is None:
 			self.catchingTimer = 0.25
 			self.stunTimer = 0.65
+			self.serverCheckBallCollision()
 		#Throw
 		else:
 			forward = False
@@ -340,7 +351,8 @@ class Player(Sprite):
 			if forward:
 				#self.holding.position.x += (-15, 15)[self.team]
 				self.holding.z += 8
-			g.game.net.sendThrowMessage(self, self.holding, self.holding.velocity, self.holding.zVelocity, self.holding.mode)
+			if g.SERVER:
+				g.game.net.sendThrowMessage(self, self.holding, self.holding.velocity, self.holding.zVelocity, self.holding.mode)
 			self.holding = None
 			self.throwTimer = 0.35
 			self.stunTimer = 0.35
@@ -365,21 +377,26 @@ class Player(Sprite):
 						self.superTicks = min(self.superTicks + 2, 6)
 						if self.z > 0:
 							self.midairBonus = True
-					self.holding = ent
-					self.holding.z = 10
-					self.holding.zVelocity = 0
-					self.holding.velocity = Vector2(0,0)
-					self.holding.held = True
+					if g.SERVER or self.localPlayer:
+						self.holding = ent
+						self.holding.z = 10
+						self.holding.held = True
+					print self.localPlayer
+					ent.zVelocity = 0
+					ent.velocity = Vector2(0,0)
 					self.stunTimer = 0
-					g.game.net.sendPickupMessage(self, ent)
-					g.game.playSound("catch.wav")
+					if g.SERVER:
+						g.game.net.sendPickupMessage(self, ent)
+						g.game.playSound("catch.wav")
 				elif (ent.position - self.position).lengthSquared() < (9 * 9) and (ent.velocity.length() > 55 or ent.zVelocity < -45) and ent.throwTeam != self.team and self.hitTimer <= 0:
-					self.health -= ent.damage
+					if g.SERVER:
+						self.health -= ent.damage
 					self.knockbackVelocity = ent.velocity.clone()
 					self.stunTimer = 0.65
 					self.hitTimer = 0.75
-					ent.thrower.superTicks = min(ent.thrower.superTicks + 1, 6)
-					g.game.playSound("hit.wav")
+					if g.SERVER:
+						ent.thrower.superTicks = min(ent.thrower.superTicks + 1, 6)
+						g.game.playSound("hit.wav")
 					if ent.position.x > self.position.x:
 						ent.velocity.x = abs(ent.velocity.x) * 0.8
 						ent.velocity.y += random.random() * 60 - 30
@@ -464,11 +481,11 @@ class PlayerController:
 			if evt.key == pygame.K_z:
 				if self.player.clientCanAttemptThrow():
 					self.netClient.sendButtonInput("super", self.player.position)
-					self.player.stunTimer = 5.0
+					#self.player.stunTimer = 5.0
 			if evt.key == pygame.K_x:
 				if self.player.clientCanAttemptThrow():
 					self.netClient.sendButtonInput("throw", self.player.position)
-					self.player.stunTimer = 5.0
+					#self.player.stunTimer = 5.0
 			if evt.key == pygame.K_c:
 				self.netClient.sendButtonInput("jump", self.player.position)
 				self.player.tryJump()

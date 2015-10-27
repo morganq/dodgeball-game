@@ -9,7 +9,7 @@ sock.settimeout(0)
 last = 0
 missed = 0
 
-while last < 1000:
+while last < 100:
 	try:
 		(data, info) = sock.recvfrom(4096)
 		d = int(data)

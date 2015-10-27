@@ -117,6 +117,8 @@ class NetServer(NetCommon):
 		data["z"] = int(e.z)
 		data["zVelocity"] = int(e.zVelocity)
 		data["visible"] = e.visible
+		if e.name == "ball":
+			data["held"] = e.held
 		if "teleporting" in e.netinfo and e.netinfo["teleporting"]:
 			data["teleporting"] = True
 			e.netinfo["teleporting"] = False
@@ -145,7 +147,7 @@ class NetServer(NetCommon):
 		self.broadcast({"type":"pickup", "player":player.netinfo["netid"], "ball":ball.netinfo["netid"]})
 
 	def sendThrowMessage(self, player, ball, velocity, zVel, mode):
-		self.broadcast({"type":"throw", "player":player.netinfo["netid"], "ball":ball.netinfo["netid"],
+		self.broadcast({"type":"throw", "time":self.t, "player":player.netinfo["netid"], "ball":ball.netinfo["netid"],
 		"velocity":velocity, "zVelocity": zVel, "mode":mode, "team":player.team})
 
 	def startRound(self, game):
@@ -225,15 +227,7 @@ class NetServer(NetCommon):
 
 	def updatePlayerPosFromAuthority(self, t, player, position):
 		ago = self.t - t
-		ago = 0
-		old = player.getOldState(ago)
-		predictedXY = position + old["velocity"] * ago
-		confidence = 1 - (min(0.5, max(0,ago)) * 2)
-		confidence = 1.0
-		#player.position = predictedXY * confidence + player.position * (1-confidence)
-		if (predictedXY - player.position).lengthSquared() > 4*4:
-			#player.position = predictedXY * confidence + player.position * (1-confidence)
-			player.position = predictedXY
+		player.position = position
 
 
 	def process_playerPos(self, data, game, info):
@@ -254,13 +248,20 @@ class NetServer(NetCommon):
 		c = self.getClient(info)
 		if c is None:
 			return
+
+		attempt_catch = False
+		if not c.entity.holding:
+			attempt_catch = True
 		if data["button"] == "throw":
 			c.entity.tryThrow(False)
 		if data["button"] == "super":
 			c.entity.tryThrow(True)
 		if data["button"] == "jump":
 			c.entity.tryJump()
+		if attempt_catch and not c.entity.holding:
+			self.sendToClient(c, {"type":"badClientSideCatch"})
 		self.updatePlayerPosFromAuthority(data["time"], c.entity, Vector2(data["x"], data["y"]))	
+
 
 	def process_playerInfo(self, data, game, info):
 		c = self.getClient(info)

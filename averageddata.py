@@ -19,6 +19,13 @@ class AveragedData:
 			return 0
 		return sum([d["value"] for d in bd]) / float(len(bd))
 
+	def get_sum(self, time, key, back):
+		self.prune(time)
+		bd = filter(lambda x:x["t"] > time - back, self.data[key])
+		if not bd:
+			return 0
+		return sum([d["value"] for d in bd])	
+
 	def prune(self, time):
 		for k,v in self.data.items():
 			self.data[k] = filter(lambda x:x["t"] > time - self.max_time, v)

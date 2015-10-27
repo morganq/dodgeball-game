@@ -30,9 +30,10 @@ class NetCommon:
 		self.packetsPerSecond = 0
 		
 		self.simulatedLatency = 0
-		self.simulatedRandomLatency = 0
 		self.simulatedRandomLatencyVal = 0
 		self.simulatedPacketloss = 0
+
+		self.simulatedRandomLatency = 0
 		self.simulatedPackets = []
 
 		self.packet_outbound_last_id = defaultdict(lambda:0)
@@ -147,7 +148,7 @@ class NetCommon:
 		self.t = pygame.time.get_ticks() / 1000.0
 
 		self.packetsPerSecond = self.averagedData.get_ct(self.t, "packets", 1.0)
-		self.packetSize = self.averagedData.get_avg(self.t, "packetsize", 5.0)
+		self.packetSize = self.averagedData.get_sum(self.t, "packetsize", 1.0)
 
 		allPackets = []
 		try:
